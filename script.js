@@ -851,7 +851,7 @@
     const scale = Math.min(W, H) * 0.32;
     const letterH = scale;
     const cx = W * 0.46;
-    const cy = H * 0.26;
+    const cy = H * 0.22;
     const spacing = Math.max(7, scale * 0.026);
 
     // letter cell positions
@@ -985,11 +985,12 @@
   // SPECIAL MOMENT STATE MACHINE
   // ---------------------------------------------------------
   const special = {
-    state: 'idle', // idle -> gathering -> holding -> releasing -> idle
+    state: 'idle', // idle -> gathering -> holding -> message -> releasing -> idle
     timer: 0,
     triggered: false,
     GATHER: 4200,
-    HOLD: 3400,
+    HOLD: 2400,
+    MESSAGE: 3400,
     RELEASE: 4600,
   };
 
@@ -1012,7 +1013,10 @@
       if (special.timer >= special.GATHER) { special.state = 'holding'; special.timer = 0; }
     } else if (special.state === 'holding') {
       skyBlooms.forEach((b) => b.updateHold(dt));
-      if (special.timer >= special.HOLD) { special.state = 'releasing'; special.timer = 0; }
+      if (special.timer >= special.HOLD) { special.state = 'message'; special.timer = 0; }
+    } else if (special.state === 'message') {
+      skyBlooms.forEach((b) => b.updateHold(dt));
+      if (special.timer >= special.MESSAGE) { special.state = 'releasing'; special.timer = 0; }
     } else if (special.state === 'releasing') {
       const t = clamp(special.timer / special.RELEASE, 0, 1);
       skyBlooms.forEach((b) => b.updateScatter(t));
@@ -1183,10 +1187,46 @@
   }
 
   function getFormationAlpha() {
-    if (special.state === 'holding') return 1;
+    if (special.state === 'holding' || special.state === 'message') return 1;
     if (special.state === 'gathering') return smoothstep(clamp(special.timer / special.GATHER, 0, 1));
     if (special.state === 'releasing') return 1 - smoothstep(clamp(special.timer / special.RELEASE, 0, 1));
     return 0;
+  }
+
+  function getMessageAlpha() {
+    if (special.state === 'message') {
+      return smoothstep(clamp(special.timer / (special.MESSAGE * 0.3), 0, 1));
+    }
+    if (special.state === 'releasing') {
+      return 1 - smoothstep(clamp(special.timer / (special.RELEASE * 0.35), 0, 1));
+    }
+    return 0;
+  }
+
+  function drawMessageText() {
+    const alpha = getMessageAlpha();
+    if (alpha <= 0.01 || !nameTargets.length) return;
+    let maxY = -Infinity, minX = Infinity, maxX = -Infinity;
+    nameTargets.forEach((p) => {
+      maxY = Math.max(maxY, p.y);
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+    });
+    const cx = (minX + maxX) / 2;
+    const drift = (1 - alpha) * 16;
+    const y = maxY + Math.min(W, H) * 0.07 + drift;
+    const fontSize = Math.min(W, H) * 0.065;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `italic 400 ${fontSize}px 'Segoe Script', 'Brush Script MT', 'Snell Roundhand', 'Apple Chancery', cursive`;
+    ctx.shadowColor = 'rgba(255, 244, 214, 0.85)';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = 'rgba(255, 250, 240, 0.97)';
+    ctx.fillText('te quiero', cx, y);
+    ctx.restore();
   }
 
   function drawFormationAura() {
@@ -1332,6 +1372,7 @@
       drawFormationAura();
       drawFormationStrokes();
       skyBlooms.forEach((b) => b.draw(ctx));
+      drawMessageText();
     }
 
     drawVignette();
