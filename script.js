@@ -115,6 +115,7 @@
   let butterflies, bees, dragonflies, ladybugs;
   let petalsFloating, seedsFloating, birds;
   let nameTargets = [];
+  let nameStrokes = [];
   let grassTop = 0; // y where grass field begins (css px)
 
   // ---------------------------------------------------------
@@ -851,7 +852,7 @@
     const letterH = scale;
     const cx = W * 0.46;
     const cy = H * 0.26;
-    const spacing = Math.max(8, scale * 0.038);
+    const spacing = Math.max(7, scale * 0.026);
 
     // letter cell positions
     const lX = cx - scale * 0.95;
@@ -861,20 +862,27 @@
     const botY = cy + letterH * 0.5;
 
     let pts = [];
+    nameStrokes = [];
 
     // L: vertical stroke + base
-    pts = pts.concat(segPoints(lX, topY, lX, botY, spacing));
-    pts = pts.concat(segPoints(lX, botY, lX + scale * 0.42, botY, spacing));
+    const lVert = segPoints(lX, topY, lX, botY, spacing);
+    const lBase = segPoints(lX, botY, lX + scale * 0.46, botY, spacing);
+    nameStrokes.push(lVert, lBase);
+    pts = pts.concat(lVert, lBase);
 
     // i (1): stem + dot
-    const i1StemTop = cy - letterH * 0.12;
-    pts = pts.concat(segPoints(i1X, i1StemTop, i1X, botY, spacing));
-    pts = pts.concat(circlePoints(i1X, cy - letterH * 0.34, scale * 0.045, 8));
+    const i1StemTop = cy - letterH * 0.10;
+    const i1Stem = segPoints(i1X, i1StemTop, i1X, botY, spacing);
+    nameStrokes.push(i1Stem);
+    pts = pts.concat(i1Stem);
+    pts = pts.concat(circlePoints(i1X, cy - letterH * 0.34, scale * 0.06, 10));
 
     // i (2): stem + dot
-    const i2StemTop = cy - letterH * 0.12;
-    pts = pts.concat(segPoints(i2X, i2StemTop, i2X, botY, spacing));
-    pts = pts.concat(circlePoints(i2X, cy - letterH * 0.34, scale * 0.045, 8));
+    const i2StemTop = cy - letterH * 0.10;
+    const i2Stem = segPoints(i2X, i2StemTop, i2X, botY, spacing);
+    nameStrokes.push(i2Stem);
+    pts = pts.concat(i2Stem);
+    pts = pts.concat(circlePoints(i2X, cy - letterH * 0.34, scale * 0.06, 10));
 
     return pts;
   }
@@ -896,8 +904,13 @@
       this.delay = rand(0, 0.4) + Math.abs(index % 17) * 0.012;
       this.rotation = rand(0, TAU);
       this.rotSpeed = rand(-0.6, 0.6);
-      this.size = rand(6, 10);
-      this.hue = pick(FLOWER_COLORS[pick(SPECIES)]);
+      this.size = rand(9, 14);
+      this.hue = pick([
+        { h: 46, s: 65, l: 88 },
+        { h: 38, s: 55, l: 92 },
+        { h: 350, s: 45, l: 88 },
+        { h: 40, s: 20, l: 97 },
+      ]);
       this.wobbleSeed = rand(0, 1000);
       this.arcHeight = rand(60, 160);
       this.scatterAngle = rand(0, TAU);
@@ -938,26 +951,27 @@
       ctx.translate(this.x, this.y);
       ctx.rotate(this.rotation);
       const s = this.size;
-      // soft glow so the blossom reads clearly against the sky
-      const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2.6);
-      glow.addColorStop(0, `hsla(${this.hue.h}, ${this.hue.s}%, ${Math.min(this.hue.l + 12, 96)}%, 0.5)`);
+      // tight, bright glow so the blossom reads clearly against the sky
+      const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.5);
+      glow.addColorStop(0, `hsla(${this.hue.h}, ${this.hue.s}%, ${Math.min(this.hue.l + 8, 99)}%, 0.85)`);
+      glow.addColorStop(0.55, `hsla(${this.hue.h}, ${this.hue.s}%, ${this.hue.l}%, 0.35)`);
       glow.addColorStop(1, `hsla(${this.hue.h}, ${this.hue.s}%, ${this.hue.l}%, 0)`);
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(0, 0, s * 2.6, 0, TAU);
+      ctx.arc(0, 0, s * 1.5, 0, TAU);
       ctx.fill();
       // tiny blossom: a rosette of petals
       const petals = 5;
       for (let i = 0; i < petals; i++) {
         ctx.save();
         ctx.rotate((i / petals) * TAU);
-        ctx.fillStyle = `hsla(${this.hue.h}, ${this.hue.s}%, ${this.hue.l}%, 0.95)`;
-        drawPetal(ctx, s, s * 0.42, rand(-0.6, 0.6));
+        ctx.fillStyle = `hsla(${this.hue.h}, ${this.hue.s}%, ${Math.max(this.hue.l - 6, 60)}%, 1)`;
+        drawPetal(ctx, s, s * 0.46, rand(-0.6, 0.6));
         ctx.restore();
       }
-      ctx.fillStyle = 'hsla(45, 70%, 88%, 0.95)';
+      ctx.fillStyle = 'hsla(48, 80%, 92%, 1)';
       ctx.beginPath();
-      ctx.arc(0, 0, s * 0.32, 0, TAU);
+      ctx.arc(0, 0, s * 0.36, 0, TAU);
       ctx.fill();
       ctx.restore();
     }
@@ -1168,6 +1182,13 @@
     ctx.fillRect(0, 0, W, H);
   }
 
+  function getFormationAlpha() {
+    if (special.state === 'holding') return 1;
+    if (special.state === 'gathering') return smoothstep(clamp(special.timer / special.GATHER, 0, 1));
+    if (special.state === 'releasing') return 1 - smoothstep(clamp(special.timer / special.RELEASE, 0, 1));
+    return 0;
+  }
+
   function drawFormationAura() {
     if (!nameTargets.length) return;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -1177,10 +1198,7 @@
     });
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
     const r = Math.max(maxX - minX, maxY - minY) * 0.85;
-    const fadeIn = special.state === 'holding'
-      ? 1
-      : smoothstep(clamp(special.timer / special.GATHER, 0, 1));
-    const alpha = 0.28 * fadeIn * (special.state === 'releasing' ? 1 - smoothstep(clamp(special.timer / special.RELEASE, 0, 1)) : 1);
+    const alpha = 0.3 * getFormationAlpha();
     if (alpha <= 0.005) return;
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
     g.addColorStop(0, `rgba(255,250,235,${alpha})`);
@@ -1190,6 +1208,31 @@
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, TAU);
     ctx.fill();
+  }
+
+  function drawFormationStrokes() {
+    if (!nameStrokes.length) return;
+    // the connecting glow only reveals once the rise is mostly complete,
+    // so it reads as the blossoms "settling" into a continuous shape.
+    const base = getFormationAlpha();
+    const t = smoothstep(clamp((base - 0.55) / 0.45, 0, 1));
+    if (t <= 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = t * 0.8;
+    ctx.strokeStyle = 'rgba(255, 250, 235, 0.95)';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 10;
+    ctx.shadowColor = 'rgba(255, 244, 210, 0.9)';
+    ctx.shadowBlur = 22;
+    nameStrokes.forEach((stroke) => {
+      if (stroke.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y);
+      ctx.stroke();
+    });
+    ctx.restore();
   }
 
   // ---------------------------------------------------------
@@ -1287,6 +1330,7 @@
 
     if (skyBlooms.length) {
       drawFormationAura();
+      drawFormationStrokes();
       skyBlooms.forEach((b) => b.draw(ctx));
     }
 
