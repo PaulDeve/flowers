@@ -149,10 +149,10 @@
 
   function buildSky() {
     sky = {
-      // dawn gradient stops
-      top: '#a9c8dd',
-      mid: '#cfe0d3',
-      horizon: '#f3e6c9',
+      // dawn gradient stops (slightly deeper/moodier)
+      top: '#6f96b3',
+      mid: '#a9c2ac',
+      horizon: '#dcc99e',
       sunX: W * 0.78,
       sunY: H * 0.22,
     };
