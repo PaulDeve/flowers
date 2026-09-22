@@ -476,6 +476,7 @@
      ------------------------------------------------------------------ */
   let typingDone = false;
   let typingTimer = null;
+  let typingStartTimer = null;
 
   function setupLetter() {
     const skip = $("#letter-skip");
@@ -502,7 +503,8 @@
     });
     playTone("open");
 
-    setTimeout(startTyping, 700);
+    typingDone = false;
+    typingStartTimer = setTimeout(startTyping, 700);
   }
 
   function buildLetterBody() {
@@ -528,7 +530,7 @@
   }
 
   function startTyping() {
-    typingDone = false;
+    if (typingDone) return; // ya se saltó la animación: no reiniciar el tipeo
     const body = $("#letter-body");
     if (!body) return;
     const paragraphs = $$("p", body);
@@ -572,6 +574,7 @@
   function finishTypingNow() {
     if (typingDone) return;
     clearTimeout(typingTimer);
+    clearTimeout(typingStartTimer);
     const body = $("#letter-body");
     if (!body) return;
     $$("p", body).forEach((p) => {
