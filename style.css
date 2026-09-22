@@ -346,7 +346,7 @@ body[data-stage="final"]  .bg-final { opacity: 1; }
   width: 100%;
   height: 100%;
   transform-origin: 50% 100%;
-  transition: transform .45s cubic-bezier(.34, 1.56, .64, 1);
+  transition: transform .5s cubic-bezier(.34, 1.76, .64, 1);
 }
 
 .flower-lean {
@@ -387,9 +387,9 @@ body.is-windy .flower-lean { transform: rotate(calc(var(--lean, 5) * 1deg)); }
 .flower:focus-visible .focus-ring { opacity: 1; }
 
 @media (hover: hover) and (pointer: fine) {
-  .flower:hover .flower-scale { transform: scale(1.07); }
+  .flower:hover .flower-scale { transform: scale(1.07) rotate(-2deg); }
 }
-.flower.is-pop .flower-scale { transform: scale(1.15); }
+.flower.is-pop .flower-scale { transform: scale(1.22) rotate(3deg); }
 
 /* Flor especial */
 .flower-special {
