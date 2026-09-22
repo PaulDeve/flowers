@@ -95,6 +95,7 @@
     setupSound();
     setupParallax();
     setupCursorTrail();
+    setupSunEasterEgg();
     buildFinalFlower();
     setupReplay();
     startPetals();
@@ -149,17 +150,22 @@
      5. FLORES DEL CAMPO
      ------------------------------------------------------------------ */
   const flowerPalette = [
-    { petal: "#FBE070", petalDeep: "#F3C233", center: "#C9880F" },
-    { petal: "#FFE9A1", petalDeep: "#F6CE55", center: "#B87A14" },
-    { petal: "#F8D24A", petalDeep: "#E9AE1E", center: "#A9700E" },
+    { petal: "#FBE070", center: "#C9880F" },
+    { petal: "#FFE9A1", center: "#B87A14" },
+    { petal: "#F8D24A", center: "#A9700E" },
+    { petal: "#FFD98A", center: "#C2790F" },
+    { petal: "#FCE49B", center: "#AD7A12" },
+    { petal: "#F6C34A", center: "#8F5E0C" },
+    { petal: "#FFE3B0", center: "#B4790E" }, // variante crema-durazno, un toque distinto
   ];
 
-  function flowerSVG({ w, colors, withHit = true }) {
-    const petals = 7;
+  function flowerSVG({ w, colors, withHit = true, petals = 7, pointed = false }) {
     let petalShapes = "";
     for (let i = 0; i < petals; i++) {
       const deg = (360 / petals) * i;
-      petalShapes += `<ellipse cx="50" cy="24" rx="13" ry="21" fill="${colors.petal}" transform="rotate(${deg} 50 42)"/>`;
+      petalShapes += pointed
+        ? `<path d="M50 42 C41 34 41 14 50 4 C59 14 59 34 50 42 Z" fill="${colors.petal}" transform="rotate(${deg} 50 42)"/>`
+        : `<ellipse cx="50" cy="24" rx="13" ry="21" fill="${colors.petal}" transform="rotate(${deg} 50 42)"/>`;
     }
     return `
       <svg class="flower-svg" viewBox="0 0 100 208" width="100%" height="100%" overflow="visible"
@@ -216,9 +222,11 @@
       btn.style.zIndex = String(Math.round(w));
 
       const colors = pick(flowerPalette);
+      const petals = pick([6, 7, 7, 8]);
+      const pointed = Math.random() < 0.35;
       btn.innerHTML =
         '<span class="flower-lean"><span class="flower-sway"><span class="flower-scale">' +
-        flowerSVG({ w, colors }) +
+        flowerSVG({ w, colors, petals, pointed }) +
         "</span></span></span>";
 
       btn.addEventListener("click", () => onFlowerTap(btn));
@@ -263,8 +271,36 @@
     setTimeout(() => msg.remove(), 4500);
   }
 
-  /* ---- Flor especial ---- */
-  function buildSpecialFlower() {
+  /* ---- Sol: un pequeño detalle escondido ---- */
+  function setupSunEasterEgg() {
+    const sun = $(".sun");
+    if (!sun) return;
+    sun.style.pointerEvents = "auto";
+    sun.style.cursor = "pointer";
+    sun.setAttribute("role", "button");
+    sun.setAttribute("tabindex", "0");
+    sun.setAttribute("aria-label", "El sol");
+
+    const trigger = () => {
+      const rect = sun.getBoundingClientRect();
+      confettiBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, reduceMotion ? 6 : 16);
+      playTone("chosen");
+      sun.animate(
+        [{ transform: "scale(1)" }, { transform: "scale(1.06)" }, { transform: "scale(1)" }],
+        { duration: 700, easing: "ease-out" }
+      );
+    };
+
+    sun.addEventListener("click", trigger);
+    sun.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        trigger();
+      }
+    });
+  }
+
+  /* ---- Flor especial ---- */  function buildSpecialFlower() {
     const container = $("#field-special");
     if (!container) return;
 
@@ -573,6 +609,11 @@
 
       const title = $("#final-title");
       if (title) setTimeout(() => title.focus({ preventScroll: true }), 900);
+
+      // Un pequeño confeti de bienvenida para la pantalla final.
+      setTimeout(() => {
+        confettiBurst(window.innerWidth / 2, window.innerHeight * 0.42, reduceMotion ? 6 : 18);
+      }, 1600);
     }, 900);
   }
 
@@ -756,16 +797,18 @@
   /* ------------------------------------------------------------------
      14. PARTÍCULAS DE ESTALLIDO + CURSOR (solo PC)
      ------------------------------------------------------------------ */
-  function burstPetals(x, y, count) {
+  function burstPetals(x, y, count, opts = {}) {
     const layer = $("#fx-layer");
     if (!layer) return;
     const n = reduceMotion ? Math.min(count, 5) : count;
+    const palette = opts.colors || [["#FFE58A", "#F2BE2E"]];
 
     for (let i = 0; i < n; i++) {
       const p = document.createElement("span");
       p.className = "burst";
       const angle = rand(0, 360);
-      const dist = rand(40, 110);
+      const dist = rand(opts.minDist || 40, opts.maxDist || 110);
+      const [c1, c2] = pick(palette);
       p.style.left = x + "px";
       p.style.top = y + "px";
       p.style.setProperty("--bs", rand(7, 13) + "px");
@@ -773,15 +816,49 @@
       p.style.setProperty("--dy", Math.sin((angle * Math.PI) / 180) * dist - 30 + "px");
       p.style.setProperty("--rot", rand(-140, 140) + "deg");
       p.style.setProperty("--bd", rand(0.8, 1.3) + "s");
+      p.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
       layer.appendChild(p);
       setTimeout(() => p.remove(), 1500);
     }
   }
 
+  // Pequeño confeti festivo de varios tonos, usado en la pantalla final.
+  function confettiBurst(x, y, count) {
+    burstPetals(x, y, count, {
+      minDist: 60,
+      maxDist: 160,
+      colors: [
+        ["#FFE58A", "#F2BE2E"],
+        ["#FFD9A0", "#F0A93C"],
+        ["#FFF0BE", "#F6CE55"],
+        ["#FBE9CE", "#E7B96A"],
+      ],
+    });
+  }
+
   function setupCursorTrail() {
-    if (isTouch || reduceMotion) return;
+    if (reduceMotion) return;
     const layer = $("#fx-layer");
     if (!layer) return;
+
+    if (isTouch) {
+      // En móvil: un pequeño toque de brillo al tocar la pantalla (no continuo).
+      let lastTap = 0;
+      document.addEventListener(
+        "touchstart",
+        (e) => {
+          const now = performance.now();
+          if (now - lastTap < 350) return;
+          lastTap = now;
+          const t = e.touches[0];
+          if (!t) return;
+          spawnTrailDot(layer, t.clientX, t.clientY);
+        },
+        { passive: true }
+      );
+      return;
+    }
+
     let lastTime = 0;
 
     window.addEventListener(
@@ -790,18 +867,21 @@
         const now = performance.now();
         if (now - lastTime < 55) return; // throttling
         lastTime = now;
-
-        const t = document.createElement("span");
-        t.className = "trail";
-        t.style.left = e.clientX + "px";
-        t.style.top = e.clientY + "px";
-        t.style.setProperty("--ts", rand(5, 9) + "px");
-        t.style.setProperty("--dx", rand(-8, 8) + "px");
-        layer.appendChild(t);
-        setTimeout(() => t.remove(), 1000);
+        spawnTrailDot(layer, e.clientX, e.clientY);
       },
       { passive: true }
     );
+  }
+
+  function spawnTrailDot(layer, x, y) {
+    const t = document.createElement("span");
+    t.className = "trail";
+    t.style.left = x + "px";
+    t.style.top = y + "px";
+    t.style.setProperty("--ts", rand(5, 9) + "px");
+    t.style.setProperty("--dx", rand(-8, 8) + "px");
+    layer.appendChild(t);
+    setTimeout(() => t.remove(), 1000);
   }
 
   /* ------------------------------------------------------------------
